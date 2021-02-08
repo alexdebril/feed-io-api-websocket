@@ -1,20 +1,32 @@
 package handler
 
 import (
+	"log"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
 func TestItemHandler_ServeHTTP(t *testing.T) {
-	req := &http.Request{
-		Method: "POST",
-	}
+	buf := strings.NewReader("{\"title\": \"test\", \"feed_url\": \"http://localhost\"}")
+	req := httptest.NewRequest(http.MethodPost, "/item", buf)
 	writer := &responseWriter{
 		expectedStatus: 204,
 		testing:        t,
 	}
-	h := &ItemHandler{}
+	var msg chan Item
+	msg = make(chan Item)
+	defer func() {
+		close(msg)
+		msg = nil
+	}()
+	h := &ItemHandler{
+		Message: msg,
+	}
 	h.ServeHTTP(writer, req)
+	message := <-msg
+	log.Printf("%v", message)
 }
 
 type responseWriter struct {

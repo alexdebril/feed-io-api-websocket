@@ -9,7 +9,10 @@ import (
 func main() {
 	log.Println("starting server ...")
 	mux := http.NewServeMux()
-	h := &handler.ItemHandler{}
+	var msg chan handler.Item
+	h := &handler.ItemHandler{
+		Message: msg,
+	}
 
 	mux.Handle("/item", h)
 	s := &http.Server{
