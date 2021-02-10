@@ -1,32 +1,25 @@
-package handler
+package api
 
 import (
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/alexdebril/feed-io-api-websocket/messaging"
 )
 
-func TestItemHandler_ServeHTTP(t *testing.T) {
+func TestApi_ServeHTTP(t *testing.T) {
 	buf := strings.NewReader("{\"title\": \"test\", \"feed_url\": \"http://localhost\"}")
 	req := httptest.NewRequest(http.MethodPost, "/item", buf)
 	writer := &responseWriter{
 		expectedStatus: 204,
 		testing:        t,
 	}
-	var msg chan Item
-	msg = make(chan Item)
-	defer func() {
-		close(msg)
-		msg = nil
-	}()
-	h := &ItemHandler{
-		Message: msg,
-	}
-	h.ServeHTTP(writer, req)
-	message := <-msg
-	log.Printf("%v", message)
+	dispatcher := &testDispatcher{expectedCalls: 1}
+	api := &Api{dispatcher}
+	api.ServeHTTP(writer, req)
+
 }
 
 type responseWriter struct {
@@ -46,4 +39,12 @@ func (r *responseWriter) WriteHeader(statusCode int) {
 	if statusCode != r.expectedStatus {
 		r.testing.Fatalf("unexpected status: %v", statusCode)
 	}
+}
+
+type testDispatcher struct {
+	expectedCalls int
+}
+
+func (t *testDispatcher) Handle(item messaging.Item) {
+	t.expectedCalls = t.expectedCalls + 1
 }

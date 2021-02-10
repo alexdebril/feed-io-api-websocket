@@ -3,19 +3,24 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/alexdebril/feed-io-api-websocket/handler"
-	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/alexdebril/feed-io-api-websocket/api"
+	"github.com/alexdebril/feed-io-api-websocket/messaging"
 )
 
-var ItemChannel chan handler.Item
+var ItemChannel chan messaging.Item
 
 func main() {
 	log.Println("starting server ...")
 	mux := http.NewServeMux()
+	dispatcher := &ChannelDispatcher{}
 
-	mux.HandleFunc("/item", ReceiveMessage)
+	api := &api.Api{
+		Dispatcher: dispatcher,
+	}
+	mux.Handle("/item", api)
 	mux.HandleFunc("/read", publish)
 
 	s := &http.Server{
@@ -29,31 +34,13 @@ func main() {
 	}
 }
 
-func ReceiveMessage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.WriteHeader(400)
-		return
-	}
-	item, err := parseItem(r)
-	if err != nil {
-		fmt.Printf(err.Error())
-		w.WriteHeader(500)
-	}
+type ChannelDispatcher struct{}
+
+func (d *ChannelDispatcher) Handle(item messaging.Item) {
 	ItemChannel <- item
-	w.WriteHeader(204)
 }
 
-func parseItem(r *http.Request) (handler.Item, error) {
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return handler.Item{}, err
-	}
-	i := handler.Item{}
-	err = json.Unmarshal(body, &i)
-	return i, err
-}
-
-func toJson(item handler.Item) string {
+func toJson(item messaging.Item) string {
 	out, err := json.Marshal(item)
 	if err != nil {
 		return "{}"
@@ -67,7 +54,7 @@ func publish(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	ItemChannel = make(chan handler.Item)
+	ItemChannel = make(chan messaging.Item)
 	defer func() {
 		close(ItemChannel)
 		ItemChannel = nil
