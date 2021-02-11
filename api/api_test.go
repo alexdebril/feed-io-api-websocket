@@ -45,6 +45,14 @@ type testDispatcher struct {
 	expectedCalls int
 }
 
+func (t *testDispatcher) GetChannel() (int, chan messaging.Item) {
+	return 0, nil
+}
+
+func (t *testDispatcher) Release(id int) {
+
+}
+
 func (t *testDispatcher) Handle(item messaging.Item) {
 	t.expectedCalls = t.expectedCalls + 1
 }
