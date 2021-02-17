@@ -26,7 +26,7 @@ func (ws *Websocket) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case item := <-channel:
-			_, _ = fmt.Fprintf(w, "%s\n", toJson(item))
+			_, _ = fmt.Fprintf(w, "event: item\n data: %s\n\n", toJson(item))
 			flusher.Flush()
 		case <-r.Context().Done():
 			return
